@@ -1,0 +1,68 @@
+#!/bin/sh
+#set -x
+if [ -f /tmp/auto_backlight.lock ]; then
+	exit 1
+else
+	touch /tmp/auto_backlight.lock
+fi
+
+log_file=/tmp/auto_backlight.log
+sensor_output_file=/sys/bus/acpi/devices/ACPI0008\:00/iio\:device0/in_illuminance_raw
+
+smoothly_adjust()
+{
+	while [ $cur_level -lt $target_level ]; do
+		let cur_level+=5;
+		if [ $cur_level -gt $target_level ]; then
+			light -S $target_level
+		else
+			light -A 5
+		fi
+		sleep 0.1
+	done
+
+	while [ $cur_level -gt $target_level ]; do
+		let cur_level-=5;
+		if [ $cur_level -lt $target_level ]; then
+			light -S $target_level
+		else
+			light -U 5
+		fi
+		sleep 0.1
+	done
+}
+
+auto_set()
+{
+	now=$(date +%s)
+	cur_level=$(( $(light | tr -d .) / 100 ))
+	last_time=0
+
+	if [ -f $log_file ]; then
+		last_time=$(cat $log_file | awk '{ print $1 }')
+		last_level=$(cat $log_file | awk '{ print $2 }')
+	fi
+
+	interval=$(($now - $last_time))
+
+	i=0
+	average=0
+	while [ $i -lt 5 ]; do
+		let average+=$(cat $sensor_output_file)
+		sleep 0.1
+		let i+=1
+	done
+	env_light=$(($average / 5))
+	if [ $env_light -gt 100 ]; then
+		$env_light=100
+	fi
+	target_level=$(($env_light / 2 + 10))
+	
+	if [ $interval -gt 600 ]; then
+		smoothly_adjust
+	fi
+}
+
+while sleep 0.5; do
+	auto_set
+done
