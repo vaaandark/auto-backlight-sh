@@ -44,7 +44,12 @@ auto_set()
 	fi
 
 	interval=$(($now - $last_time))
+  # 如果十分钟内设置了手动条调节
+	if [ $interval -gt 600 ]; then
+    return 1
+  fi
 
+  # 采样
 	i=0
 	average=0
 	while [ $i -lt 5 ]; do
@@ -54,13 +59,11 @@ auto_set()
 	done
 	env_light=$(($average / 5))
 	if [ $env_light -gt 100 ]; then
-		$env_light=100
+		env_light=100
 	fi
 	target_level=$(($env_light / 2 + 10))
 	
-	if [ $interval -gt 600 ]; then
-		smoothly_adjust
-	fi
+  smoothly_adjust
 }
 
 while sleep 0.5; do
