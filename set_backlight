@@ -1,9 +1,9 @@
 #!/bin/bash
 set -xv
 if [[ -f /tmp/auto_backlight.lock ]]; then
-	exit 1
+  exit 1
 else
-	touch /tmp/auto_backlight.lock
+  touch /tmp/auto_backlight.lock
 fi
 
 log_file='/tmp/auto_backlight.log'
@@ -11,59 +11,59 @@ sensor_output_file='/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance
 
 smoothly_adjust()
 {
-	while [[ "$cur_level" -lt "$target_level" ]]; do
+  while [[ "$cur_level" -lt "$target_level" ]]; do
     (( cur_level+=5 ))
-		if [[ "$cur_level" -gt "$target_level" ]]; then
-			light -S "$target_level"
-		else
-			light -A 5
-		fi
-		sleep 0.1
-	done
+    if [[ "$cur_level" -gt "$target_level" ]]; then
+      light -S "$target_level"
+    else
+      light -A 5
+    fi
+    sleep 0.1
+  done
 
-	while [[ "$cur_level" -gt "$target_level" ]]; do
+  while [[ "$cur_level" -gt "$target_level" ]]; do
     (( cur_level-=5 ))
-		if [[ "$cur_level" -lt "$target_level" ]]; then
-			light -S "$target_level"
-		else
-			light -U 5
-		fi
-		sleep 0.1
-	done
+    if [[ "$cur_level" -lt "$target_level" ]]; then
+      light -S "$target_level"
+    else
+      light -U 5
+    fi
+    sleep 0.1
+  done
 }
 
 auto_set()
 {
-	now=$(date +%s)
-	cur_level=$(( $(light | tr -d .) / 100 ))
-	last_time=0
+  now=$(date +%s)
+  cur_level=$(( $(light | tr -d .) / 100 ))
+  last_time=0
 
-	if [[ -f $log_file ]]; then
-		last_time=$(cat $log_file | awk '{ print $1 }')
-#		last_level=$(cat $log_file | awk '{ print $2 }')
-	fi
+  if [[ -f $log_file ]]; then
+    last_time=$(cat $log_file | awk '{ print $1 }')
+#    last_level=$(cat $log_file | awk '{ print $2 }')
+  fi
 
-	interval=$((now - last_time))
+  interval=$((now - last_time))
   # 如果十分钟内设置了手动条调节
-	[[ $interval -gt 600 ]] || return 1
+  [[ $interval -gt 600 ]] || return 1
 
   # 采样
-	i=0
-	average=0
-	while [[ $i -lt 5 ]]; do
+  i=0
+  average=0
+  while [[ $i -lt 5 ]]; do
     (( average+=$(cat $sensor_output_file) ))
-		sleep 0.1
+    sleep 0.1
     (( i = i + 1 ))
-	done
-	env_light=$((average / 5))
-	if [[ $env_light -gt 100 ]]; then
-		env_light=100
-	fi
-	target_level=$((env_light / 2 + 10))
-	
+  done
+  env_light=$((average / 5))
+  if [[ $env_light -gt 100 ]]; then
+    env_light=100
+  fi
+  target_level=$((env_light / 2 + 10))
+  
   smoothly_adjust
 }
 
 while sleep 0.5; do
-	auto_set
+  auto_set
 done
