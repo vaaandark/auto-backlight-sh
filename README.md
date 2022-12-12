@@ -26,25 +26,10 @@ bindsym XF86MonBrightnessDown exec lightdown
 ```
 - 如果是`i3blocks`用户，则可以利用`i3blocks`间隔执行脚本
 ```
-# 删除掉脚本`set_backlight`如下部分
-if [ -f /tmp/auto_backlight_lock ]; then
-	exit 1
-else
-	touch /tmp/auto_backlight_lock
-fi
-
-# 修改脚本`set_backlight`最后部分
-while sleep 1; do
-	auto_set
-done
-# 改为
-auto_set
-```
-```
 # `i3blocks`配置文件加入
 [AUTO_BACKLIGHT]
 command={set_backlight的路径}
-interval=1
+interval=persist
 ```
 - 如果想要登录自动启动，可以在`.bashrc`、`.zshrc`等配置文件中加入
 ```
